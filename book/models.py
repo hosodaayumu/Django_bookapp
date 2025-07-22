@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 from .consts import MAX_RATE
 
 
@@ -26,13 +27,18 @@ class Shelf(models.Model):
 
 class Review(models.Model):
     book = models.ForeignKey(Shelf, on_delete=models.CASCADE)
-    title = models.CharField(max_length=100)
+    title = models.CharField(max_length=100,choices = CATEGORY,)
     text = models.TextField()
     rate = models.IntegerField(choices=RATE_CHOICES)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     
     def __str__(self):
         return self.title
+    
+    # その投稿の詳細ページへのリンク
+    def get_absolute_url(self):
+        print("dddd")
+        return reverse('detail-book', kwargs={'pk':self.object.book.id})  
 
 # Create your models here.
 
