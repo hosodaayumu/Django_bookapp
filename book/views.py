@@ -5,6 +5,7 @@ from django.urls import reverse, reverse_lazy
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Avg
+from django.core.paginator import Paginator
 
 # レビューの表示
 
@@ -37,13 +38,17 @@ class DetailBookView(generic.DetailView):
     template_name = 'book/book_detail.html'
     model = Shelf
     context_object_name = 'Shelf'
-
-def dispatch(self, request, *args, **kwargs):
-        obj = self.get_object()
-        if obj.user != self.request.user:
-            raise PermissionDenied('削除権限がありません。')
-        return super(DeleteBookView, self).dispatch(request, *args, **kwargs) 
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # 本に関連するレビューを取得
+        reviews = Review.objects.filter(book=self.object).order_by('-id')  # 最新のレビュー順
+        paginator = Paginator(reviews, 3)  # 1ページに3件表示
+        page_number = self.request.GET.get('page')
+        context['reviews'] = paginator.get_page(page_number)
+        return context 
+        
+        
 class CreateBookView(LoginRequiredMixin,generic.CreateView):
     template_name = 'book/book_create.html'
     model = Shelf
@@ -77,7 +82,7 @@ class UpdateBookView(LoginRequiredMixin,generic.UpdateView):
     
 class CreateReviewView(LoginRequiredMixin,generic.CreateView):
     model = Review
-    fields = ('book', 'title', 'text', 'rate')
+    fields = ('book', 'text', 'rate')
     template_name = 'book/review_form.html'
     
     def get_context_data(self, **kwargs):
@@ -87,11 +92,10 @@ class CreateReviewView(LoginRequiredMixin,generic.CreateView):
 
     def form_valid(self, form):
         form.instance.user = self.request.user
-        print("************2")
+        form.instance.title = form.instance.text
         return super().form_valid(form)
 
     def get_success_url(self):
-        print("************1")
         return reverse('detail-book', kwargs={'pk':self.object.book.id})  
 
     
